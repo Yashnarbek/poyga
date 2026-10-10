@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matematik Poyga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Saira+Condensed:wght@500;600;700&display=swap">
+<style>
+  [hidden] { display: none !important; }
+  /* Layout: player 1 keypad on the left, circuit scene + round tracker + question in the middle, player 2 keypad on the right */
+  :root {
+    --ground: #0e121a;
+    --panel: #151b27;
+    --panel-2: #1b2334;
+    --line: #2a3447;
+    --ink: #e8ecf3;
+    --ink-2: #98a4b9;
+    --amber: #f2b84b;
+    --amber-deep: #b27f1c;
+    --amber-ink: #1d1405;
+    --p1: #e8523a;
+    --p2: #4a8cf0;
+    --p1-bg: rgba(232, 82, 58, 0.16);
+    --p2-bg: rgba(74, 140, 240, 0.16);
+    --good: #3fb68b;
+    --good-bg: rgba(63, 182, 139, 0.14);
+    --bad: #ef6b61;
+    --bad-bg: rgba(239, 107, 97, 0.14);
+    --key-top: #2a3448;
+    --key-bot: #212a3b;
+    --key-edge: #394660;
+    --screen: #090c12;
+    --display: 'Saira Condensed', 'Arial Narrow', Impact, sans-serif;
+    --body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --car-w: 150px;
+    --lane-h: 82px;
+    --pad-w: clamp(148px, 17vw, 230px);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .app {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 20px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* ---------- Top bar ---------- */
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .eyebrow {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  h1 {
+    margin: 2px 0 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(2rem, 5vw, 2.8rem);
+    line-height: 1;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+  .hud { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+  .stat {
+    min-width: 92px;
+    padding: 6px 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+  .stat-l { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+  .stat-v { font-family: var(--display); font-weight: 700; font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .ghost {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); border-color: var(--ink-2); }
+
+  /* ---------- Board: pad | center | pad ---------- */
+  .board {
+    display: grid;
+    grid-template-columns: var(--pad-w) minmax(0, 1fr) var(--pad-w);
+    gap: 12px;
+    align-items: start;
+  }
+  .center { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+  /* ---------- Scene ---------- */
+  .scene {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #0b0d12;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+  .sky {
+    position: relative;
+    height: 92px;
+    background:
+      radial-gradient(1.2px 1.2px at 8% 22%, rgba(255,255,255,.8) 50%, transparent 52%),
+      radial-gradient(1px 1px at 19% 48%, rgba(255,255,255,.6) 50%, transparent 52%),
+      radial-gradient(1.2px 1.2px at 33% 16%, rgba(255,255,255,.7) 50%, transparent 52%),
+      radial-gradient(1px 1px at 47% 36%, rgba(255,255,255,.5) 50%, transparent 52%),
+      radial-gradient(1.2px 1.2px at 58% 12%, rgba(255,255,255,.7) 50%, transparent 52%),
+      radial-gradient(1px 1px at 81% 24%, rgba(255,255,255,.6) 50%, transparent 52%),
+      radial-gradient(1.2px 1.2px at 92% 44%, rgba(255,255,255,.5) 50%, transparent 52%),
+      linear-gradient(180deg, #121744 0%, #46316f 46%, #c4637a 78%, #f0a45a 100%);
+  }
+  .sun {
+    position: absolute;
+    left: 66%;
+    bottom: -30px;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffe9ae 0 34%, #ffbd6e 52%, rgba(255, 150, 80, 0) 72%);
+  }
+  .hills { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 58px; display: block; }
+  .grass {
+    height: 14px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 38px, transparent 38px 76px),
+      linear-gradient(#27493a, #1a3526);
+  }
+  .road {
+    position: relative;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>") 0 0 / 160px 160px,
+      linear-gradient(#343a46, #262b34);
+  }
+  .kerb {
+    height: 8px;
+    background: repeating-linear-gradient(90deg, #ececec 0 26px, #cf3b32 26px 52px);
+    background-size: 52px 100%;
+  }
+  .lane { position: relative; height: var(--lane-h); }
+  .divider {
+    height: 4px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.82) 0 30px, transparent 30px 60px);
+    background-size: 60px 100%;
+  }
+  .start-line { position: absolute; left: 24px; top: 0; bottom: 0; width: 3px; background: rgba(255,255,255,.7); }
+  .finish {
+    position: absolute;
+    right: 56px;
+    top: -2px;
+    bottom: -2px;
+    width: 18px;
+    background: repeating-conic-gradient(#f4f4f4 0 25%, #16181d 0 50%) 0 0 / 9px 9px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.45);
+  }
+  .finish-tag {
+    position: absolute;
+    right: 38px;
+    top: -26px;
+    padding: 1px 9px;
+    border-radius: 4px;
+    background: var(--amber);
+    color: var(--amber-ink);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+  }
+  .barrier {
+    height: 22px;
+    border-top: 2px solid #050608;
+    background:
+      radial-gradient(circle at 11px 11px, #0b0b0e 0 4px, #2b2c33 5px 9px, #0b0b0e 10px 11px, transparent 11.5px) 0 0 / 22px 22px,
+      #15161b;
+  }
+
+  /* cars */
+  .car {
+    position: absolute;
+    left: 0;
+    bottom: 9px;
+    width: var(--car-w);
+    transform: translateX(var(--x, 32px));
+    transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 3;
+  }
+  .car-svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tag {
+    position: absolute;
+    left: 4px;
+    top: -17px;
+    padding: 0 7px;
+    border-radius: 4px;
+    background: rgba(8, 10, 14, 0.72);
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .tag i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+  .wheel { transform-box: fill-box; transform-origin: center; }
+
+  .racing .road { animation: road-scroll 0.5s linear infinite; }
+  .racing .kerb { animation: kerb-scroll 0.34s linear infinite; }
+  .racing .divider { animation: dash-scroll 0.34s linear infinite; }
+  .racing .wheel { animation: spin 0.42s linear infinite; }
+  .racing .car-svg { animation: bob 0.4s ease-in-out infinite alternate; }
+  .racing #carP1 .car-svg { animation-delay: -0.2s; }
+  @keyframes road-scroll { to { background-position: -160px 0, 0 0; } }
+  @keyframes kerb-scroll { to { background-position: -52px 0; } }
+  @keyframes dash-scroll { to { background-position: -60px 0; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes bob { to { transform: translateY(-1.3px); } }
+
+  /* ---------- Round tracker ---------- */
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; }
+  .step {
+    height: 30px;
+    display: grid;
+    place-items: center;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink-2);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .step.cur { border-color: var(--amber); color: var(--amber); }
+  .step.p1 { background: var(--p1-bg); border-color: var(--p1); color: var(--p1); }
+  .step.p2 { background: var(--p2-bg); border-color: var(--p2); color: var(--p2); }
+  .step.none { border-style: dashed; }
+
+  /* ---------- Question card ---------- */
+  .q-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; min-height: clamp(150px, 26vh, 260px); }
+  h2 { margin: 0 0 8px; font-family: var(--display); font-weight: 700; font-size: clamp(1.5rem, 3.6vw, 2rem); line-height: 1.1; text-wrap: balance; }
+  .lead { margin: 0; color: var(--ink-2); max-width: 66ch; }
+  .names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+  .field span, .levels legend { display: block; margin-bottom: 6px; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+  .field input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--screen);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+  }
+  .field input[type="text"]::placeholder { color: var(--ink-2); opacity: 0.7; }
+  .levels { border: 0; margin: 16px 0 0; padding: 0; min-width: 0; }
+  .levels legend { padding: 0; }
+  .level-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .level { position: relative; display: block; cursor: pointer; }
+  .level input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .lv-box { display: block; height: 100%; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; }
+  .lv-name { display: block; font-family: var(--display); font-weight: 700; font-size: 1.25rem; line-height: 1.1; }
+  .lv-note { display: block; margin-top: 2px; font-size: 0.8rem; color: var(--ink-2); }
+  .level input:checked + .lv-box { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+  .level input:checked + .lv-box .lv-name { color: var(--amber); }
+  .level input:focus-visible + .lv-box { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 16px 0 18px; }
+  .term { padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; }
+  .term b { display: block; font-family: var(--display); font-weight: 700; font-size: 1.25rem; line-height: 1.1; color: var(--amber); letter-spacing: 0.04em; }
+  .term span { font-size: 0.82rem; color: var(--ink-2); }
+
+  .btn {
+    appearance: none;
+    border: 0;
+    border-radius: 10px;
+    padding: 12px 22px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    background: var(--amber);
+    color: var(--amber-ink);
+    box-shadow: 0 3px 0 var(--amber-deep);
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+  .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--amber-deep); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.wide { width: 100%; margin-top: 8px; padding: 9px 8px; font-size: 0.9rem; }
+  .btn.quiet { background: transparent; color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
+
+  .q-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .chip { font-family: var(--display); font-weight: 700; letter-spacing: 0.08em; font-size: 0.95rem; padding: 2px 10px; border-radius: 6px; background: var(--amber); color: var(--amber-ink); }
+  .q-name { color: var(--ink-2); font-size: 0.92rem; }
+  .q-count { margin-left: auto; font-family: var(--display); font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .q-line { margin: 20px 0 4px; font-size: clamp(1.15rem, 2.6vw, 1.45rem); line-height: 1.3; text-wrap: balance; }
+  .q-number { font-family: var(--display); font-weight: 700; font-size: clamp(2.8rem, 8vw, 4.2rem); line-height: 1; margin-right: 0.18em; font-variant-numeric: tabular-nums; }
+
+  .feedback { margin-top: 16px; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line); display: grid; gap: 6px; }
+  .feedback.ok { background: var(--good-bg); border-color: var(--good); }
+  .feedback.no { background: var(--bad-bg); border-color: var(--bad); }
+  .fb-title { margin: 0; font-weight: 700; flex: 1 1 200px; }
+  .feedback.ok .fb-title { color: var(--good); }
+  .feedback.no .fb-title { color: var(--bad); }
+  .fb-answers { margin: 0; font-size: 0.9rem; color: var(--ink-2); }
+  .fb-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+  .fb-sol { display: flex; flex-wrap: wrap; gap: 2px 22px; }
+  .fb-factor, .fb-steps { margin: 0; font-family: var(--display); font-weight: 500; font-size: 1.2rem; line-height: 1.35; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  #nextBtn { margin: 0; padding: 8px 18px; }
+
+  /* ---------- Keypads ---------- */
+  .pad {
+    align-self: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .pad.side0 { --pc: var(--p1); }
+  .pad.side1 { --pc: var(--p2); }
+  .pad-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .dot { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--pc); }
+  .pname { font-family: var(--display); font-weight: 700; font-size: 1.1rem; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pscore { display: flex; align-items: baseline; gap: 4px; }
+  .pscore b { font-family: var(--display); font-weight: 700; font-size: 1.5rem; line-height: 1; font-variant-numeric: tabular-nums; }
+  .pscore span { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+  .pmeta { margin: 0 0 8px; font-size: 0.72rem; color: var(--ink-2); }
+  .readout {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 48px;
+    padding: 4px 10px;
+    margin-bottom: 8px;
+    background: var(--screen);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.8rem;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+  }
+  .readout.ok { border-color: var(--good); color: var(--good); }
+  .readout.bad { border-color: var(--bad); color: var(--bad); }
+  .readout .ph { font-family: var(--body); font-weight: 400; font-size: 0.78rem; color: var(--ink-2); }
+  .caret { display: inline-block; width: 2px; height: 1.3rem; margin-left: 3px; background: var(--amber); animation: blink 1s steps(1) infinite; }
+  .readout.shake { animation: shake 0.3s; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes shake { 20% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 80% { transform: translateX(-3px); } }
+
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .key {
+    height: clamp(38px, 6.4vh, 52px);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--key-edge);
+    border-bottom-width: 3px;
+    border-radius: 8px;
+    background: linear-gradient(var(--key-top), var(--key-bot));
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.4rem;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .key:hover:not(:disabled) { border-color: var(--ink-2); }
+  .key:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+  .key:disabled { opacity: 0.38; cursor: not-allowed; }
+  .key.util { font-size: 1rem; color: var(--ink-2); }
+  .hint { margin: 8px 0 0; font-size: 0.72rem; color: var(--ink-2); }
+  .hint.warn { color: var(--bad); }
+  @media (pointer: coarse) { .hint:not(.warn) { display: none; } }
+
+  /* ---------- Result dialog ---------- */
+  .modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(5, 7, 11, 0.78); }
+  .modal-card { width: 100%; max-width: 460px; padding: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+  .modal-card h2 { margin-top: 4px; }
+  .modal-card p.sub { color: var(--ink-2); margin: 0 0 16px; }
+  .m-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 20px; }
+  .m-stats div { padding: 10px 14px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+  .m-stats dt { display: flex; align-items: center; gap: 7px; font-family: var(--display); font-weight: 600; font-size: 1.05rem; overflow: hidden; white-space: nowrap; }
+  .m-stats dt i { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+  .m-stats dd { margin: 0; }
+  .m-stats .big { font-family: var(--display); font-weight: 700; font-size: 1.9rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .m-stats small { display: block; font-size: 0.8rem; color: var(--ink-2); }
+  .m-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  @media (max-width: 1000px) {
+    :root { --car-w: 120px; }
+  }
+  @media (max-width: 640px) {
+    .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .center { grid-column: 1 / -1; order: -1; }
+    .pad { align-self: start; }
+  }
+  @media (max-width: 380px) {
+    .board { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    :root { --car-w: 106px; --lane-h: 68px; }
+    .sky { height: 70px; }
+    .sun { width: 74px; height: 74px; }
+    .hills { height: 44px; }
+    .app { padding-block: 14px 28px; }
+    .q-card { padding: 16px; }
+    .steps { gap: 4px; }
+    .step { font-size: 0.8rem; }
+    .names { grid-template-columns: minmax(0, 1fr); }
+    .level-row { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-height: 820px) {
+    :root { --lane-h: 66px; --car-w: 108px; }
+    .app { padding-block: 10px 14px; gap: 10px; }
+    .center { gap: 10px; }
+    .top .eyebrow { display: none; }
+    h1 { font-size: 1.7rem; }
+    .stat { padding: 3px 10px; }
+    .stat-v { font-size: 1.2rem; }
+    .sky { height: 58px; }
+    .sun { width: 70px; height: 70px; bottom: -22px; }
+    .hills { height: 38px; }
+    .grass { height: 10px; }
+    .barrier { height: 16px; }
+    .step { height: 24px; font-size: 0.85rem; }
+    .q-card { padding: 12px 16px; }
+    .q-line { margin: 8px 0 2px; }
+    .q-number { font-size: 2.6rem; }
+    .feedback { margin-top: 8px; padding: 8px 12px; }
+    .terms { display: none; }
+    .names, .levels { margin-top: 10px; }
+    .lead { font-size: 0.9rem; }
+  }
+  @media (max-height: 680px) {
+    :root { --lane-h: 58px; --car-w: 92px; }
+    .sky { height: 40px; }
+    .sun { display: none; }
+    .hills { height: 26px; }
+    .modal-card { padding: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Olimpiada trenaji · 2 kishilik</p>
+      <h1>Matematik Poyga</h1>
+    </div>
+    <div class="hud">
+      <div class="stat"><span class="stat-l">Bosqich</span><span class="stat-v" id="roundStat">0 / 12</span></div>
+      <div class="stat"><span class="stat-l">Daraja</span><span class="stat-v" id="levelStat">O'rta</span></div>
+      <button type="button" class="ghost" id="soundBtn" aria-pressed="true">Ovoz: yoqilgan</button>
+      <button type="button" class="ghost" id="fsBtn">To'liq ekran</button>
+    </div>
+  </header>
+
+  <div class="board" id="board">
+    <aside class="pad side0" id="pad0" aria-label="1-o'yinchi javob paneli"></aside>
+
+    <div class="center">
+      <section class="scene" id="scene" role="img" aria-label="Poyga yo'li. Qizil mashina 1-o'yinchi, ko'k mashina 2-o'yinchi.">
+        <div class="sky">
+          <div class="sun"></div>
+          <svg class="hills" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 120 L0 66 C80 38 140 28 220 60 C300 90 360 38 450 32 C540 26 600 78 700 68 C800 58 860 18 960 34 C1060 50 1120 68 1200 46 L1200 120 Z" fill="#2a2147"/>
+            <path d="M0 120 L0 92 C100 74 180 96 280 84 C380 72 460 100 560 92 C680 82 760 70 860 88 C960 106 1060 80 1200 90 L1200 120 Z" fill="#1b1733"/>
+          </svg>
+        </div>
+        <div class="grass"></div>
+        <div class="road" id="road">
+          <div class="kerb"></div>
+          <div class="lane"><div class="car" id="carP0"><span class="tag" id="tagP0"></span></div></div>
+          <div class="divider"></div>
+          <div class="lane"><div class="car" id="carP1"><span class="tag" id="tagP1"></span></div></div>
+          <div class="kerb"></div>
+          <div class="start-line"></div>
+          <div class="finish"></div>
+          <div class="finish-tag">MARRA</div>
+        </div>
+        <div class="barrier"></div>
+      </section>
+
+      <ol class="steps" id="steps" aria-label="Bosqichlar"></ol>
+
+      <div class="q-card" id="qcard">
+        <div id="intro">
+          <h2>Ikki kishilik poyga</h2>
+          <p class="lead">Ikkala o'yinchi bir xil savolga javob beradi. Birinchi bo'lib to'g'ri javob bergan o'yinchining mashinasi oldinga yuradi. Xato javob mashinani biroz orqaga qaytaradi va shu savolda ikkinchi urinish bermaydi. Marraga birinchi yetgan yutadi. 12 bosqichda hech kim yetmasa, oldinda turgan g'alaba qozonadi.</p>
+
+          <div class="names">
+            <label class="field"><span>1-o'yinchi ismi (qizil)</span><input type="text" id="name0" maxlength="14" placeholder="1-o'yinchi" autocomplete="off"></label>
+            <label class="field"><span>2-o'yinchi ismi (ko'k)</span><input type="text" id="name1" maxlength="14" placeholder="2-o'yinchi" autocomplete="off"></label>
+          </div>
+
+          <fieldset class="levels">
+            <legend>Qiyinlik darajasi</legend>
+            <div class="level-row">
+              <label class="level"><input type="radio" name="level" value="easy"><span class="lv-box"><span class="lv-name">Oson</span><span class="lv-note">Sonlar 12 dan 60 gacha</span></span></label>
+              <label class="level"><input type="radio" name="level" value="mid" checked><span class="lv-box"><span class="lv-name">O'rta</span><span class="lv-note">Sonlar 24 dan 300 gacha</span></span></label>
+              <label class="level"><input type="radio" name="level" value="hard"><span class="lv-box"><span class="lv-name">Qiyin</span><span class="lv-note">Murakkab uch xonali sonlar</span></span></label>
+            </div>
+          </fieldset>
+
+          <div class="terms">
+            <div class="term"><b>NBS</b><span>Natural bo'luvchilar soni</span></div>
+            <div class="term"><b>NBY</b><span>Natural bo'luvchilar yig'indisi</span></div>
+            <div class="term"><b>TBS</b><span>Tub bo'luvchilar soni</span></div>
+            <div class="term"><b>TBY</b><span>Tub bo'luvchilar yig'indisi</span></div>
+          </div>
+          <button type="button" class="btn" id="startBtn">Poygani boshlash</button>
+        </div>
+
+        <div id="question" hidden>
+          <div class="q-meta">
+            <span class="chip" id="qChip">NBS</span>
+            <span class="q-name" id="qName"></span>
+            <span class="q-count" id="qCount"></span>
+          </div>
+          <p class="q-line"><span class="q-number" id="qNumber"></span><span id="qText"></span></p>
+          <div class="feedback" id="feedback" role="status" hidden>
+            <div class="fb-top">
+              <p class="fb-title" id="fbTitle"></p>
+              <button type="button" class="btn" id="nextBtn" hidden>Keyingi savol</button>
+            </div>
+            <p class="fb-answers" id="fbAnswers"></p>
+            <div class="fb-sol">
+              <p class="fb-factor" id="fbFactor"></p>
+              <p class="fb-steps" id="fbSteps"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="pad side1" id="pad1" aria-label="2-o'yinchi javob paneli"></aside>
+  </div>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" hidden>
+  <div class="modal-card">
+    <p class="eyebrow">Poyga yakuni</p>
+    <h2 id="mTitle"></h2>
+    <p class="sub" id="mText"></p>
+    <dl class="m-stats">
+      <div><dt><i style="background:var(--p1)"></i><span id="mN0"></span></dt><dd><span class="big" id="mS0"></span><small id="mW0"></small></dd></div>
+      <div><dt><i style="background:var(--p2)"></i><span id="mN1"></span></dt><dd><span class="big" id="mS1"></span><small id="mW1"></small></dd></div>
+    </dl>
+    <div class="m-actions">
+      <button type="button" class="btn" id="again">Yana o'ynash</button>
+      <button type="button" class="btn quiet" id="toSettings">Sozlamalar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var MAX_ROUNDS = 12, STEP = 1 / 6, PENALTY = 0.04;
+  var TYPES = {
+    NBS: { name: "Natural bo'luvchilar soni", text: "sonining natural bo'luvchilari soni nechta?" },
+    NBY: { name: "Natural bo'luvchilar yig'indisi", text: "sonining barcha natural bo'luvchilari yig'indisini toping." },
+    TBS: { name: "Tub bo'luvchilar soni", text: "sonining tub bo'luvchilari soni nechta?" },
+    TBY: { name: "Tub bo'luvchilar yig'indisi", text: "sonining barcha tub bo'luvchilari yig'indisini toping." }
+  };
+  var KEYS = Object.keys(TYPES);
+  var LEVELS = {
+    easy: { label: 'Oson', lo: 12, hi: 60 },
+    mid: { label: "O'rta", lo: 24, hi: 300 },
+    hard: { label: 'Qiyin', lo: 120, hi: 999 }
+  };
+  var COLORS = ['#e8523a', '#4a8cf0'];
+  var DEFAULT_NAMES = ["1-o'yinchi", "2-o'yinchi"];
+  var HINTS = [
+    'Klaviatura: yuqori raqamlar qatori, Backspace, Enter.',
+    "Klaviatura: Numpad raqamlari, Numpad nuqta (o'chirish), Numpad Enter."
+  ];
+  var BACK_SVG = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 3 12l6 7h12V5z"/><path d="m12.5 9.5 5 5m0-5-5 5"/></svg>';
+
+  function $(id) { return document.getElementById(id); }
+
+  /* ---------- Car artwork ---------- */
+  function carSVG(id, c1, c2, num) {
+    function wheel(cx) {
+      return '<g transform="translate(' + cx + ' 55)"><g class="wheel">' +
+        '<circle r="13" fill="#101114"/><circle r="9.5" fill="#d9dde5" stroke="#8a909b" stroke-width="1"/>' +
+        '<path d="M0 -9 V9 M-9 0 H9 M-6.4 -6.4 L6.4 6.4 M-6.4 6.4 L6.4 -6.4" stroke="#6c7280" stroke-width="1.5" fill="none"/>' +
+        '<circle r="2.8" fill="#3b3f48"/></g></g>';
+    }
+    return '<svg class="car-svg" viewBox="0 0 200 72" aria-hidden="true">' +
+      '<defs>' +
+      '<linearGradient id="b-' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + c1 + '"/><stop offset="1" stop-color="' + c2 + '"/></linearGradient>' +
+      '<linearGradient id="g-' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4e8ff"/><stop offset="1" stop-color="#2b3b54"/></linearGradient>' +
+      '<linearGradient id="l-' + id + '" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff3c4" stop-opacity=".5"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/></linearGradient>' +
+      '</defs>' +
+      '<ellipse cx="100" cy="67" rx="94" ry="5" fill="#000" opacity=".45"/>' +
+      '<polygon points="194,44 272,31 272,67 194,48" fill="url(#l-' + id + ')"/>' +
+      '<path d="M3 25h27v4H3z M10 29v9 M22 29v7" fill="#14161b" stroke="#14161b" stroke-width="2.5"/>' +
+      '<path d="M6 51C6 43 9 40 17 38L48 34C58 23 76 16 98 16L128 16C141 16 151 24 159 32L183 37C192 39 196 44 196 51L196 55L6 55Z" fill="url(#b-' + id + ')"/>' +
+      '<path d="M72 20C80 16.5 90 16 98 16L128 16" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.5"/>' +
+      '<path d="M63 33C71 24 83 20 96 20L103 20L103 33Z M109 20L124 20C132 20 138 25 146 33L109 33Z" fill="url(#g-' + id + ')"/>' +
+      '<path d="M147 33l9 -1 1.5 3.5 -9 1z" fill="url(#b-' + id + ')"/>' +
+      '<path d="M20 44H188" stroke="#fff" stroke-opacity=".85" stroke-width="2.2"/>' +
+      '<path d="M103 33V54" stroke="#000" stroke-opacity=".3"/>' +
+      '<rect x="50" y="51" width="98" height="4" rx="2" fill="#0e1015" opacity=".7"/>' +
+      '<circle cx="82" cy="45" r="6.5" fill="#fff"/>' +
+      '<text x="82" y="48.3" text-anchor="middle" font-family="Saira Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="10" fill="#111">' + num + '</text>' +
+      '<path d="M29.5 55A16.5 16.5 0 0 1 62.5 55Z M135.5 55A16.5 16.5 0 0 1 168.5 55Z" fill="#0c0e12"/>' +
+      wheel(46) + wheel(152) +
+      '<path d="M186 41L196 43L196 47L187 46Z" fill="#fff6cf"/>' +
+      '<rect x="6" y="42" width="5" height="5" rx="1" fill="#ff3b30"/>' +
+      '</svg>';
+  }
+  $('carP0').insertAdjacentHTML('beforeend', carSVG('p0', '#e8523a', '#a62a1c', '1'));
+  $('carP1').insertAdjacentHTML('beforeend', carSVG('p1', '#4a8cf0', '#1f4fa3', '2'));
+
+  /* ---------- Keypads ---------- */
+  function padHTML(i) {
+    var order = ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'clear', '0', 'back'];
+    var keys = order.map(function (k) {
+      if (k === 'clear') return '<button type="button" class="key util" data-p="' + i + '" data-k="clear" aria-label="Tozalash">C</button>';
+      if (k === 'back') return '<button type="button" class="key util" data-p="' + i + '" data-k="back" aria-label="Oxirgi raqamni o\'chirish">' + BACK_SVG + '</button>';
+      return '<button type="button" class="key" data-p="' + i + '" data-k="' + k + '">' + k + '</button>';
+    }).join('');
+    return '<div class="pad-head"><div class="who"><i class="dot"></i><span class="pname" id="pname' + i + '"></span></div>' +
+      '<div class="pscore"><b id="pscore' + i + '">0</b><span>ball</span></div></div>' +
+      '<p class="pmeta" id="pmeta' + i + '"></p>' +
+      '<output class="readout" id="readout' + i + '"></output>' +
+      '<div class="keys" id="keys' + i + '">' + keys + '</div>' +
+      '<button type="button" class="btn wide" id="submit' + i + '" data-p="' + i + '">Yuborish</button>' +
+      '<p class="hint" id="hint' + i + '">' + HINTS[i] + '</p>';
+  }
+  $('pad0').innerHTML = padHTML(0);
+  $('pad1').innerHTML = padHTML(1);
+
+  /* ---------- Sound ---------- */
+  var actx = null, soundOn = true;
+  function audio() {
+    if (!soundOn) return null;
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) { actx = null; }
+    return actx;
+  }
+  function beep(freq, when, dur, type, vol, slideTo) {
+    var c = audio(); if (!c) return;
+    try {
+      var t = c.currentTime + when, o = c.createOscillator(), g = c.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+      g.gain.setValueAtTime(vol || 0.15, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    } catch (e) {}
+  }
+  var SND = {
+    tick: function () { beep(520, 0, 0.04, 'square', 0.04); },
+    good: function () { beep(523, 0, 0.12, 'triangle', 0.18); beep(784, 0.1, 0.18, 'triangle', 0.18); },
+    bad: function () { beep(180, 0, 0.28, 'sawtooth', 0.13, 90); },
+    win: function () { [523, 659, 784, 1047].forEach(function (f, i) { beep(f, i * 0.12, 0.25, 'triangle', 0.18); }); }
+  };
+  $('soundBtn').addEventListener('click', function () {
+    soundOn = !soundOn;
+    this.setAttribute('aria-pressed', String(soundOn));
+    this.textContent = soundOn ? 'Ovoz: yoqilgan' : "Ovoz: o'chiq";
+  });
+
+  /* ---------- Maths ---------- */
+  function factorize(n) {
+    var f = [], t = n;
+    for (var d = 2; d * d <= t; d++) {
+      if (t % d === 0) { var a = 0; while (t % d === 0) { t /= d; a++; } f.push([d, a]); }
+    }
+    if (t > 1) f.push([t, 1]);
+    return f;
+  }
+  function factorHTML(f) {
+    return f.map(function (x) { return x[0] + (x[1] > 1 ? '<sup>' + x[1] + '</sup>' : ''); }).join(' · ');
+  }
+  function solve(type, n) {
+    var f = factorize(n), ans = 0, steps = '';
+    if (type === 'NBS') {
+      var exps = f.map(function (x) { return x[1] + 1; });
+      ans = exps.reduce(function (a, b) { return a * b; }, 1);
+      steps = f.map(function (x) { return '(' + x[1] + ' + 1)'; }).join(' · ') + ' = ' + exps.join(' · ') + (f.length > 1 ? ' = ' + ans : '');
+    } else if (type === 'NBY') {
+      var parts = f.map(function (x) {
+        var t = [], s = 0, pw = 1;
+        for (var i = 0; i <= x[1]; i++) { t.push(pw); s += pw; pw *= x[0]; }
+        return { t: t, s: s };
+      });
+      ans = parts.reduce(function (a, p) { return a * p.s; }, 1);
+      steps = parts.map(function (p) { return '(' + p.t.join(' + ') + ')'; }).join(' · ') + ' = ' +
+        parts.map(function (p) { return p.s; }).join(' · ') + (parts.length > 1 ? ' = ' + ans : '');
+    } else if (type === 'TBS') {
+      ans = f.length;
+      steps = "Tub bo'luvchilar: " + f.map(function (x) { return x[0]; }).join(', ') + '. Jami: ' + ans + ' ta.';
+    } else {
+      ans = f.reduce(function (a, x) { return a + x[0]; }, 0);
+      steps = f.map(function (x) { return x[0]; }).join(' + ') + ' = ' + ans;
+    }
+    return { n: n, type: type, f: f, ans: ans, steps: steps };
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function acceptable(level, type, f) {
+    if (f.length === 1 && f[0][1] === 1) return false;
+    if ((type === 'TBS' || type === 'TBY') && f.length < 2) return false;
+    if (level === 'hard') {
+      var mx = Math.max.apply(null, f.map(function (x) { return x[1]; }));
+      return f.length >= 3 || (f.length >= 2 && mx >= 3);
+    }
+    return true;
+  }
+  function buildQuestions(level) {
+    var L = LEVELS[level], types = [];
+    for (var r = 0; r < MAX_ROUNDS / KEYS.length; r++) types = types.concat(KEYS);
+    shuffle(types);
+    var used = {}, out = [];
+    types.forEach(function (type) {
+      var n = 0;
+      for (var i = 0; i < 800; i++) {
+        var c = L.lo + Math.floor(Math.random() * (L.hi - L.lo + 1));
+        if (used[c]) continue;
+        if (!acceptable(level, type, factorize(c))) continue;
+        n = c; break;
+      }
+      if (!n) n = 360;
+      used[n] = true;
+      out.push(solve(type, n));
+    });
+    return out;
+  }
+
+  /* ---------- State ---------- */
+  var phase = 'idle', round = 0, qs = [], results = [], curLevel = 'mid', nextTimer = 0;
+  var hintTimers = [0, 0];
+  function mk(i) { return { name: DEFAULT_NAMES[i], pos: 0, score: 0, wins: 0, streak: 0, input: '', status: 'typing', last: null }; }
+  var P = [mk(0), mk(1)];
+  function chosenLevel() { var r = document.querySelector('input[name="level"]:checked'); return r ? r.value : 'mid'; }
+  function isOver() { return P[0].pos >= 0.999 || P[1].pos >= 0.999 || round >= MAX_ROUNDS - 1; }
+
+  /* ---------- Rendering ---------- */
+  var stepsEl = $('steps');
+  for (var s = 0; s < MAX_ROUNDS; s++) { var li = document.createElement('li'); li.className = 'step'; li.textContent = s + 1; stepsEl.appendChild(li); }
+
+  function setTag(el, color, text) {
+    el.textContent = '';
+    var d = document.createElement('i'); d.style.background = color;
+    el.appendChild(d); el.appendChild(document.createTextNode(text));
+  }
+  function place() {
+    var w = $('road').clientWidth, carW = $('carP0').offsetWidth;
+    var start = 32, end = w - 65 - carW + 6, span = Math.max(40, end - start);
+    for (var i = 0; i < 2; i++) {
+      $('carP' + i).style.setProperty('--x', (start + P[i].pos * span) + 'px');
+      setTag($('tagP' + i), COLORS[i], P[i].name.toUpperCase() + ' · ' + Math.round(P[i].pos * 100) + '%');
+    }
+  }
+  function renderSteps() {
+    var items = stepsEl.children;
+    for (var i = 0; i < MAX_ROUNDS; i++) {
+      var cls = 'step', r = results[i];
+      if (r === 0) cls += ' p1';
+      else if (r === 1) cls += ' p2';
+      else if (r === -1) cls += ' none';
+      else if (i === round && phase === 'asking') cls += ' cur';
+      items[i].className = cls;
+    }
+  }
+  function renderHeader() {
+    $('roundStat').textContent = (phase === 'idle' ? 0 : round + 1) + ' / ' + MAX_ROUNDS;
+    $('levelStat').textContent = LEVELS[phase === 'idle' ? chosenLevel() : curLevel].label;
+  }
+  function renderPad(i) {
+    var p = P[i], typing = phase === 'asking' && p.status === 'typing';
+    $('pname' + i).textContent = p.name;
+    $('pscore' + i).textContent = p.score;
+    $('pmeta' + i).textContent = "g'alaba: " + p.wins + ' · seriya: ' + p.streak;
+    var r = $('readout' + i);
+    r.classList.toggle('ok', p.status === 'won');
+    r.classList.toggle('bad', p.status === 'wrong');
+    if (p.status === 'won' || p.status === 'wrong') r.innerHTML = '<span>' + p.last + '</span>';
+    else if (p.input) r.innerHTML = '<span>' + p.input + '</span>' + (typing ? '<i class="caret"></i>' : '');
+    else if (typing) r.innerHTML = '<span class="ph">Javobni kiriting</span><i class="caret"></i>';
+    else if (phase === 'idle') r.innerHTML = '<span class="ph">Poygani boshlang</span>';
+    else r.innerHTML = '<span class="ph">Javob yuborilmadi</span>';
+    var ks = $('keys' + i).querySelectorAll('.key');
+    for (var k = 0; k < ks.length; k++) ks[k].disabled = !typing;
+    var sb = $('submit' + i);
+    sb.disabled = !typing;
+    if (typing) sb.textContent = 'Yuborish';
+    else if (p.status === 'wrong') sb.textContent = 'Xato: qulflandi';
+    else if (p.status === 'won') sb.textContent = "To'g'ri!";
+    else if (phase === 'feedback' || phase === 'done') sb.textContent = 'Bosqich tugadi';
+    else sb.textContent = 'Yuborish';
+  }
+  function syncUI() {
+    var fb = phase === 'feedback' || phase === 'done';
+    $('intro').hidden = phase !== 'idle';
+    $('question').hidden = phase === 'idle';
+    $('feedback').hidden = !fb;
+    var nb = $('nextBtn');
+    nb.hidden = phase !== 'feedback';
+    nb.textContent = isOver() ? "Natijani ko'rish" : 'Keyingi savol';
+    renderPad(0); renderPad(1); renderSteps(); renderHeader();
+  }
+  function flash(i, msg) {
+    var h = $('hint' + i);
+    h.textContent = msg; h.classList.add('warn');
+    var r = $('readout' + i); r.classList.remove('shake'); void r.offsetWidth; r.classList.add('shake');
+    clearTimeout(hintTimers[i]);
+    hintTimers[i] = setTimeout(function () { h.textContent = HINTS[i]; h.classList.remove('warn'); }, 1800);
+  }
+
+  /* ---------- Game flow ---------- */
+  function startRound() {
+    P.forEach(function (p) { p.input = ''; p.status = 'typing'; p.last = null; });
+    var q = qs[round];
+    $('qChip').textContent = q.type;
+    $('qName').textContent = TYPES[q.type].name;
+    $('qCount').textContent = (round + 1) + ' / ' + MAX_ROUNDS;
+    $('qNumber').textContent = q.n;
+    $('qText').textContent = TYPES[q.type].text;
+    phase = 'asking';
+    syncUI();
+  }
+  function startGame() {
+    audio();
+    curLevel = chosenLevel();
+    var names = [P[0].name, P[1].name];
+    P = [mk(0), mk(1)];
+    P[0].name = names[0]; P[1].name = names[1];
+    qs = buildQuestions(curLevel); results = []; round = 0;
+    $('modal').hidden = true;
+    $('scene').classList.add('racing');
+    place();
+    startRound();
+  }
+  function toSettings() {
+    var names = [P[0].name, P[1].name];
+    P = [mk(0), mk(1)];
+    P[0].name = names[0]; P[1].name = names[1];
+    phase = 'idle'; round = 0; results = []; qs = [];
+    $('modal').hidden = true;
+    $('scene').classList.remove('racing');
+    place(); syncUI();
+  }
+  function finishRound(w) {
+    var q = qs[round];
+    results[round] = w;
+    P.forEach(function (p) { if (p.status === 'typing') p.status = 'wait'; });
+    $('feedback').className = 'feedback ' + (w === -1 ? 'no' : 'ok');
+    $('fbTitle').textContent = w === -1
+      ? "Ikkala o'yinchi ham xato qildi. Bu bosqichda ball yo'q. To'g'ri javob: " + q.ans + '.'
+      : P[w].name + " birinchi bo'lib to'g'ri javob berdi! +10 ball";
+    $('fbAnswers').textContent = P.map(function (p) {
+      return p.name + ': ' + (p.last === null ? 'javob bermadi' : p.last + (p.status === 'won' ? " (to'g'ri)" : ' (xato)'));
+    }).join('  ·  ');
+    $('fbFactor').innerHTML = q.n + ' = ' + factorHTML(q.f);
+    $('fbSteps').textContent = q.steps;
+    phase = 'feedback';
+    var nb = $('nextBtn'); nb.disabled = true;
+    clearTimeout(nextTimer);
+    nextTimer = setTimeout(function () { nb.disabled = false; }, 700);
+    place(); syncUI();
+  }
+  function submit(i) {
+    if (phase !== 'asking') return;
+    var p = P[i];
+    if (p.status !== 'typing') return;
+    if (!p.input) { flash(i, 'Avval javobni kiriting.'); return; }
+    var q = qs[round], val = parseInt(p.input, 10);
+    p.last = val;
+    if (val === q.ans) {
+      p.status = 'won'; p.score += 10; p.wins++; p.streak++;
+      P[1 - i].streak = 0;
+      p.pos = Math.min(1, p.pos + STEP);
+      SND.good();
+      finishRound(i);
+    } else {
+      p.status = 'wrong'; p.streak = 0;
+      p.pos = Math.max(0, p.pos - PENALTY);
+      SND.bad();
+      if (P[1 - i].status === 'wrong') finishRound(-1);
+      else { renderPad(i); place(); }
+    }
+  }
+  function next() {
+    if (phase !== 'feedback' || $('nextBtn').disabled) return;
+    if (isOver()) { endGame(); return; }
+    round++;
+    startRound();
+  }
+  function endGame() {
+    phase = 'done';
+    $('scene').classList.remove('racing');
+    var d = P[0].pos - P[1].pos, title, text;
+    var crossed = P[0].pos >= 0.999 || P[1].pos >= 0.999;
+    if (Math.abs(d) < 1e-9) { title = 'Durang'; text = 'Ikkala mashina teng natija ko\'rsatdi.'; }
+    else {
+      var w = d > 0 ? 0 : 1;
+      title = P[w].name + " g'alaba qozondi!";
+      text = crossed ? P[w].name + ' marraga birinchi yetdi.' : MAX_ROUNDS + ' bosqichdan keyin ' + P[w].name + ' oldinda turdi.';
+    }
+    SND.win();
+    $('mTitle').textContent = title;
+    $('mText').textContent = text;
+    for (var i = 0; i < 2; i++) {
+      $('mN' + i).textContent = P[i].name;
+      $('mS' + i).textContent = P[i].score + ' ball';
+      $('mW' + i).textContent = "g'alaba: " + P[i].wins + ' ta';
+    }
+    $('modal').hidden = false;
+    syncUI();
+    $('again').focus();
+  }
+  function press(i, k) {
+    if (phase !== 'asking') return;
+    var p = P[i];
+    if (p.status !== 'typing') return;
+    if (k === 'back') p.input = p.input.slice(0, -1);
+    else if (k === 'clear') p.input = '';
+    else if (p.input.length < 6) p.input = (p.input === '0' ? '' : p.input) + k;
+    SND.tick();
+    renderPad(i);
+  }
+
+  /* ---------- Events ---------- */
+  $('board').addEventListener('mousedown', function (e) {
+    if (e.target.closest('.key')) e.preventDefault();
+  });
+  $('board').addEventListener('click', function (e) {
+    var k = e.target.closest('[data-k]');
+    if (k && !k.disabled) { press(+k.getAttribute('data-p'), k.getAttribute('data-k')); return; }
+    var sb = e.target.closest('.btn[data-p]');
+    if (sb && !sb.disabled) submit(+sb.getAttribute('data-p'));
+  });
+  $('startBtn').addEventListener('click', startGame);
+  $('nextBtn').addEventListener('click', next);
+  $('again').addEventListener('click', startGame);
+  $('toSettings').addEventListener('click', toSettings);
+
+  [$('name0'), $('name1')].forEach(function (inp, i) {
+    inp.addEventListener('input', function () {
+      if (phase !== 'idle') return;
+      P[i].name = inp.value.trim().slice(0, 14) || DEFAULT_NAMES[i];
+      renderPad(i); place();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="level"]'), function (r) {
+    r.addEventListener('change', renderHeader);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    if (!$('modal').hidden) return;
+    var c = e.code;
+    if (c === 'Enter' || c === 'NumpadEnter') {
+      if (phase === 'asking') { e.preventDefault(); if (!e.repeat) submit(c === 'Enter' ? 0 : 1); }
+      else if (phase === 'feedback') { e.preventDefault(); if (!e.repeat) next(); }
+      return;
+    }
+    if (phase !== 'asking') return;
+    var m = /^Digit([0-9])$/.exec(c);
+    if (m) { e.preventDefault(); press(0, m[1]); return; }
+    m = /^Numpad([0-9])$/.exec(c);
+    if (m) { e.preventDefault(); press(1, m[1]); return; }
+    if (c === 'Backspace') { e.preventDefault(); press(0, 'back'); }
+    else if (c === 'NumpadDecimal') { e.preventDefault(); press(1, 'back'); }
+  });
+
+  var fsBtn = $('fsBtn');
+  if (!document.fullscreenEnabled || !document.documentElement.requestFullscreen) fsBtn.hidden = true;
+  fsBtn.addEventListener('click', function () {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else { var pr = document.documentElement.requestFullscreen(); if (pr && pr.catch) pr.catch(function () {}); }
+    } catch (e) {}
+  });
+  document.addEventListener('fullscreenchange', function () {
+    fsBtn.textContent = document.fullscreenElement ? "To'liq ekrandan chiqish" : "To'liq ekran";
+    place();
+  });
+
+  window.addEventListener('resize', place);
+  place(); syncUI();
+})();
+</script>
+
+</body>
+</html>
